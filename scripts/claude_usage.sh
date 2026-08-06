@@ -17,11 +17,11 @@ command -v jq > /dev/null 2>&1 || exit 0
 
 now_ms=$(($(date +%s) * 1000))
 
-read -r util age_ms < <(jq -r --argjson now "$now_ms" '
+read -r session week age_ms < <(jq -r --argjson now "$now_ms" '
 	.cachedUsageUtilization
 	| select(. != null)
 	| select(.utilization.seven_day.utilization != null)
-	| "\(.utilization.seven_day.utilization) \($now - (.fetchedAtMs // 0))"
+	| "\(.utilization.five_hour.utilization // 0) \(.utilization.seven_day.utilization) \($now - (.fetchedAtMs // 0))"
 ' "$f" 2> /dev/null)
 
 # Kick off a background refresh when the cache is missing or aging out. The
@@ -44,10 +44,11 @@ if [ "${age_ms:-999999999}" -gt $((refresh_interval * 1000)) ] \
 	fi
 fi
 
-[ -n "${util:-}" ] || exit 0
+[ -n "${week:-}" ] || exit 0
 
+# session (5h) / weekly (7d)
 if [ "${age_ms:-0}" -gt 3600000 ]; then
-	printf ' #[fg=#494d64]│ #[fg=#6e738d] CC: ~%.0f%%' "$util"
+	printf ' #[fg=#494d64]│ #[fg=#6e738d] CC: #[fg=#494d64]5h #[fg=#6e738d]~%.0f%% #[fg=#494d64]7d #[fg=#6e738d]~%.0f%%' "$session" "$week"
 else
-	printf ' #[fg=#494d64]│ #[fg=#eed49f] CC: %.0f%%' "$util"
+	printf ' #[fg=#494d64]│ #[fg=#eed49f] CC: #[fg=#6e738d]5h #[fg=#eed49f]%.0f%% #[fg=#6e738d]7d #[fg=#eed49f]%.0f%%' "$session" "$week"
 fi
